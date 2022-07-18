@@ -1,0 +1,8 @@
+_target_: src.datamodules.gesture_datamodule.GestureDataModule
+data_dir: ${paths.data_dir} # data_dir is specified in config.yaml
+#data_dir: '/home/zf223669/Mount/DiffusionGestureGeneration/data/GesturesData'
+framerate: 20
+seqlen: 5
+n_lookahead: 20
+dropout: 0
+batch_size: 80
