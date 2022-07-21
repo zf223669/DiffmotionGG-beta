@@ -54,5 +54,5 @@ prediction_net:
   embedding_dimension: 1
   scaling: True
   num_parallel_samples: 1
-  bvh_save_path: ${paths.output_dir}/bvh/bvh
+  bvh_save_path: ${paths.output_dir}/bvh
 
