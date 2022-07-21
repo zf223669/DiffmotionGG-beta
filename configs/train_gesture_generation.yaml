@@ -5,8 +5,8 @@
 defaults:
   - _self_
   - datamodule: datamodule_gesture_generation.yaml
-  - model: mnist.yaml
-  - callbacks: default.yaml
+  - model: gesture_diffusion_lightningmodule.yaml
+  - callbacks: callbacks_gesture_diffusion.yaml
   - logger: wandb.yaml # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
   #- trainer: default.yaml
   - trainer: gpu.yaml

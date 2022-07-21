@@ -93,6 +93,9 @@ class MotionDataset(Dataset):
         """
 
         if self.dropout > 0.:
+            self.x = np.swapaxes(self.x, 1, 2)
+            self.cond = np.swapaxes(self.cond, 1, 2)
+
             n_feats, tt = self.x[idx, :, :].shape
             cond_masked = self.cond[idx, :, :].copy()
 
@@ -107,6 +110,9 @@ class MotionDataset(Dataset):
             # print(mask)
 
             cond_masked = cond_masked * mask
+            self.x = np.swapaxes(self.x, 1, 2)
+            self.cond = np.swapaxes(self.cond, 1, 2)
+            cond_masked = np.swapaxes(cond_masked, 0, 1)
             sample = {'x': self.x[idx, :, :], 'cond': cond_masked}
         else:
             sample = {'x': self.x[idx, :, :], 'cond': self.cond[idx, :, :]}

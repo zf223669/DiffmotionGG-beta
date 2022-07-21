@@ -1,12 +1,19 @@
 from typing import Any, List
 
+import numpy as np
 import torch
 from pytorch_lightning import LightningModule
 from torchmetrics import MaxMetric
 from torchmetrics.classification.accuracy import Accuracy
+from src import utils
+import hydra
+import omegaconf
+import pyrootutils
+
+log = utils.get_pylogger(__name__)
 
 
-class MNISTLitModule(LightningModule):
+class GestureTimeGradLightingModule(LightningModule):
     """Example of LightningModule for MNIST classification.
 
     A LightningModule organizes your PyTorch code into 6 sections:
@@ -22,9 +29,10 @@ class MNISTLitModule(LightningModule):
     """
 
     def __init__(
-        self,
-        net: torch.nn.Module,
-        optimizer: torch.optim.Optimizer,
+            self,
+            train_net: torch.nn.Module,
+            prediction_net: torch.nn.Module,
+            optimizer: torch.optim.Optimizer,
     ):
         super().__init__()
 
@@ -32,80 +40,67 @@ class MNISTLitModule(LightningModule):
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False, ignore=["train_net"])
 
-        self.net = net
+        self.train_net = train_net
+        self.prediction_net = prediction_net
 
         # loss function
-        self.criterion = torch.nn.CrossEntropyLoss()
+        # self.criterion = torch.nn.CrossEntropyLoss()
 
         # use separate metric instance for train, val and test step
         # to ensure a proper reduction over the epoch
-        self.train_acc = Accuracy()
-        self.val_acc = Accuracy()
-        self.test_acc = Accuracy()
+        # self.train_acc = Accuracy()
+        # self.val_acc = Accuracy()
+        # self.test_acc = Accuracy()
 
         # for logging best so far validation accuracy
-        self.val_acc_best = MaxMetric()
+        # self.val_acc_best = MaxMetric()
 
-    def forward(self, x: torch.Tensor):
-        return self.net(x)
+    def forward(self, x: torch.Tensor, cond: torch.Tensor):
+        return self.train_net(x, cond)
 
     def on_train_start(self):
         # by default lightning executes validation step sanity checks before training starts,
         # so we need to make sure val_acc_best doesn't store accuracy from these checks
-        self.val_acc_best.reset()
+        # self.val_acc_best.reset()
+        pass
 
-    def step(self, batch: Any):
-        x, y = batch
-        logits = self.forward(x)
-        loss = self.criterion(logits, y)
-        preds = torch.argmax(logits, dim=1)
-        return loss, preds, y
+    def train_step(self, batch: Any):
+        x = batch["x"]
+        cond = batch["cond"]
+        likelihoods, mean_loss = self.forward(x, cond)
+        return likelihoods, mean_loss
 
     def training_step(self, batch: Any, batch_idx: int):
-        loss, preds, targets = self.step(batch)
-
-        # log train metrics
-        acc = self.train_acc(preds, targets)
-        self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
-        self.log("train/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
-
-        # we can return here dict with any tensors
-        # and then read it in some callback or in `training_epoch_end()` below
-        # remember to always return loss from `training_step()` or else backpropagation will fail!
-        return {"loss": loss, "preds": preds, "targets": targets}
+        # log.info(f"-------------------training_step----------------")
+        likelihoods, loss = self.train_step(batch)
+        self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        log.info(f"train mean_loss: {loss}")
+        return loss
+        # return {"likelihoods": likelihoods, "mean_loss": mean_loss}
 
     def training_epoch_end(self, outputs: List[Any]):
         # `outputs` is a list of dicts returned from `training_step()`
-        self.train_acc.reset()
+        # self.train_acc.reset()
+        pass
 
     def validation_step(self, batch: Any, batch_idx: int):
-        loss, preds, targets = self.step(batch)
-
-        # log val metrics
-        acc = self.val_acc(preds, targets)
-        self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
-        self.log("val/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
-
-        return {"loss": loss, "preds": preds, "targets": targets}
+        likelihoods, loss = self.train_step(batch)
+        self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        log.info(f"val mean_loss: {loss}")
+        return {"loss": loss, "likelihoods": likelihoods}
 
     def validation_epoch_end(self, outputs: List[Any]):
-        acc = self.val_acc.compute()  # get val accuracy from current epoch
-        self.val_acc_best.update(acc)
-        self.log("val/acc_best", self.val_acc_best.compute(), on_epoch=True, prog_bar=True)
-        self.val_acc.reset()
+        pass
 
     def test_step(self, batch: Any, batch_idx: int):
-        loss, preds, targets = self.step(batch)
-
-        # log test metrics
-        acc = self.test_acc(preds, targets)
-        self.log("test/loss", loss, on_step=False, on_epoch=True)
-        self.log("test/acc", acc, on_step=False, on_epoch=True)
-
-        return {"loss": loss, "preds": preds, "targets": targets}
+        autoreg_all = batch["autoreg"]
+        control_all = batch["control"]
+        trainer = self.trainer
+        output = self.prediction_net.forward(autoreg_all, control_all, trainer)
 
     def test_epoch_end(self, outputs: List[Any]):
-        self.test_acc.reset()
+        # self.test_acc.reset()
+        pass
 
     def configure_optimizers(self):
         """Choose what optimizers and learning-rate schedulers to use in your optimization.
@@ -125,5 +120,5 @@ if __name__ == "__main__":
     import pyrootutils
 
     root = pyrootutils.setup_root(__file__, pythonpath=True)
-    cfg = omegaconf.OmegaConf.load(root / "configs" / "model" / "mnist.yaml")
+    cfg = omegaconf.OmegaConf.load(root / "configs" / "model" / "gesture_diffusion_lightningmodule.yaml")
     _ = hydra.utils.instantiate(cfg)

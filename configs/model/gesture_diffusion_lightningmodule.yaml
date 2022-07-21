@@ -1,0 +1,58 @@
+_target_: src.models.gesture_time_grad_module.GestureTimeGradLightingModule
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 0.0015
+  weight_decay: 0.0
+
+train_net:
+  _target_: src.models.components.TimeGradTrainingNetwork.time_grad_network.TimeGradTrainingNetwork
+  input_size : 972
+  num_layers: 2
+  num_cells: 512
+  cell_type: 'LSTM'
+  history_length: 192
+  context_length: 24
+  prediction_length: 24
+  dropout_rate: 0.1
+  # lags_seq: '[1,2,3]'
+  target_dim: 45
+  conditioning_length: 100
+  diff_steps: 10
+  loss_type: 'l2'
+  beta_end: 0.1
+  beta_schedule: 'linear'
+  residual_layers: 6
+  residual_channels: 2
+  dilation_cycle_length: 10
+  # cardinality: [1]
+  embedding_dimension: 1
+  scaling: True
+
+prediction_net:
+  _target_: src.models.components.TimeGradTrainingNetwork.time_grad_network.TimeGradPredictionNetwork
+  input_size : 972
+  num_layers: 2
+  num_cells: 512
+  cell_type: 'GRU'
+  history_length: 192
+  context_length: 24
+  prediction_length: 24
+  dropout_rate: 0.1
+  # lags_seq: '[1,2,3]'
+  target_dim: 45
+  conditioning_length: 100
+  diff_steps: 10
+  loss_type: 'l2'
+  beta_end: 0.1
+  beta_schedule: 'linear'
+  residual_layers: 6
+  residual_channels: 2
+  dilation_cycle_length: 10
+  # cardinality: [1]
+  embedding_dimension: 1
+  scaling: True
+  num_parallel_samples: 1
+  bvh_save_path: ${paths.output_dir}/bvh/bvh
+
