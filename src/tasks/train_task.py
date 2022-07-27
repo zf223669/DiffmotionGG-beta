@@ -7,6 +7,7 @@ from pytorch_lightning import Callback, LightningDataModule, LightningModule, Tr
 from pytorch_lightning.loggers import LightningLoggerBase
 
 from src import utils
+from torchinfo import summary
 
 log = utils.get_pylogger(__name__)
 
@@ -32,9 +33,13 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
 
     log.info(f"Instantiating datamodule <{cfg.datamodule._target_}>")
     datamodule: LightningDataModule = hydra.utils.instantiate(cfg.datamodule)
-
     log.info(f"Instantiating model <{cfg.model._target_}>")
     model: LightningModule = hydra.utils.instantiate(cfg.model)
+    # summary(model,
+    #         verbose=1,
+    #         depth=5,
+    #         col_width=16,
+    #         row_settings=["var_names"],)
 
     log.info("Instantiating callbacks...")
     callbacks: List[Callback] = utils.instantiate_callbacks(cfg.get("callbacks"))

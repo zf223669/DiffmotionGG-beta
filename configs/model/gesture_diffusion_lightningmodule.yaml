@@ -3,56 +3,45 @@ _target_: src.models.gesture_time_grad_module.GestureTimeGradLightingModule
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 0.0015
+  lr: 1e-3
   weight_decay: 0.0
 
 train_net:
   _target_: src.models.components.TimeGradTrainingNetwork.time_grad_network.TimeGradTrainingNetwork
-  input_size : 972
+  input_size : ${datamodule.input_size}
   num_layers: 2
   num_cells: 512
   cell_type: 'LSTM'
-  history_length: 192
-  context_length: 24
   prediction_length: 24
   dropout_rate: 0.1
-  # lags_seq: '[1,2,3]'
   target_dim: 45
-  conditioning_length: 100
-  diff_steps: 10
+  conditioning_length: 512
+  diff_steps: 100
   loss_type: 'l2'
   beta_end: 0.1
   beta_schedule: 'linear'
   residual_layers: 6
   residual_channels: 2
   dilation_cycle_length: 10
-  # cardinality: [1]
-  embedding_dimension: 1
   scaling: True
 
 prediction_net:
   _target_: src.models.components.TimeGradTrainingNetwork.time_grad_network.TimeGradPredictionNetwork
-  input_size : 972
-  num_layers: 2
-  num_cells: 512
-  cell_type: 'GRU'
-  history_length: 192
-  context_length: 24
-  prediction_length: 24
-  dropout_rate: 0.1
-  # lags_seq: '[1,2,3]'
-  target_dim: 45
-  conditioning_length: 100
-  diff_steps: 10
-  loss_type: 'l2'
-  beta_end: 0.1
-  beta_schedule: 'linear'
-  residual_layers: 6
-  residual_channels: 2
-  dilation_cycle_length: 10
-  # cardinality: [1]
-  embedding_dimension: 1
-  scaling: True
-  num_parallel_samples: 1
+  input_size : ${datamodule.input_size}
+  num_layers: ${model.train_net.num_layers}
+  num_cells: ${model.train_net.num_cells}
+  cell_type: ${model.train_net.cell_type}
+  prediction_length: ${model.train_net.prediction_length}
+  dropout_rate: ${model.train_net.dropout_rate}
+  target_dim: ${model.train_net.target_dim}
+  conditioning_length: ${model.train_net.conditioning_length}
+  diff_steps: ${model.train_net.diff_steps}
+  loss_type: ${model.train_net.loss_type}
+  beta_end: ${model.train_net.beta_end}
+  beta_schedule: ${model.train_net.beta_schedule}
+  residual_layers: ${model.train_net.residual_layers}
+  residual_channels: ${model.train_net.residual_channels}
+  dilation_cycle_length: ${model.train_net.dilation_cycle_length}
+  scaling: ${model.train_net.scaling}
   bvh_save_path: ${paths.output_dir}/bvh
 

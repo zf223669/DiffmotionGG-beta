@@ -235,7 +235,7 @@ class Quaternions:
         
         """
         
-        # These conversion don't appear to work correctly for Maya.
+        # These conversion don'timestep appear to work correctly for Maya.
         # http://bediyap.com/programming/convert-quaternion-to-euler-rotations/
         
         if   order == 'xyz':

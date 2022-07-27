@@ -17,6 +17,7 @@ from Quaternions import Quaternions
 from Pivots import Pivots
 from tqdm import tqdm
 from time import sleep
+from warnings import simplefilter
 
 
 class MocapParameterizer(BaseEstimator, TransformerMixin):
@@ -674,14 +675,13 @@ class JointSelector(BaseEstimator, TransformerMixin):
 
     def inverse_transform(self, X, copy=None):
         Q = []
-
+        simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
         for track in X:
             t2 = track.clone()
             t2.skeleton = self.orig_skeleton
             for d in self.not_selected:
                 t2.values[d] = self.not_selected_values[d]
             Q.append(t2)
-
         return Q
 
 

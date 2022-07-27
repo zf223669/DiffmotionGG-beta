@@ -168,8 +168,8 @@ class LinearMaskedCoupling(nn.Module):
         # cf RealNVP eq 8 where u corresponds to x (here we're modeling u)
         log_s = torch.tanh(s) * (1 - self.mask)
         u = x * torch.exp(log_s) + t
-        # u = (x - t) * torch.exp(log_s)
-        # u = mx + (1 - self.mask) * (x - t) * torch.exp(-s)
+        # u = (x - timestep) * torch.exp(log_s)
+        # u = mx + (1 - self.mask) * (x - timestep) * torch.exp(-s)
 
         # log det du/dx; cf RealNVP 8 and 6; note, sum over input_size done at model log_prob
         # log_abs_det_jacobian = -(1 - self.mask) * s
@@ -190,8 +190,8 @@ class LinearMaskedCoupling(nn.Module):
 
         log_s = torch.tanh(s) * (1 - self.mask)
         x = (u - t) * torch.exp(-log_s)
-        # x = u * torch.exp(log_s) + t
-        # x = mu + (1 - self.mask) * (u * s.exp() + t)  # cf RealNVP eq 7
+        # x = u * torch.exp(log_s) + timestep
+        # x = mu + (1 - self.mask) * (u * s.exp() + timestep)  # cf RealNVP eq 7
 
         # log_abs_det_jacobian = (1 - self.mask) * s  # log det dx/du
         # log_abs_det_jacobian = log_s #.sum(-1, keepdim=True)

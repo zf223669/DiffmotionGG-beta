@@ -34,8 +34,8 @@ class BVHScanner():
 
         self.scanner = re.Scanner([
             (r'[a-zA-Z_]\w*', identifier),
-            #(r'-*[0-9]+(\.[0-9]+)?', digit), # won't work for .34
-            #(r'[-+]?[0-9]*\.?[0-9]+', digit), # won't work for 4.56e-2
+            #(r'-*[0-9]+(\.[0-9]+)?', digit), # won'timestep work for .34
+            #(r'[-+]?[0-9]*\.?[0-9]+', digit), # won'timestep work for 4.56e-2
             #(r'[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?', digit),
             (r'-*[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?', digit),
             (r'}', close_brace),

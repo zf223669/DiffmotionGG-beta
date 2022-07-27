@@ -96,7 +96,7 @@ class GaussianDiffusion(nn.Module):
         self.register_buffer("alphas_cumprod", to_torch(alphas_cumprod))
         self.register_buffer("alphas_cumprod_prev", to_torch(alphas_cumprod_prev))
 
-        # calculations for diffusion q(x_t | x_{t-1}) and others
+        # calculations for diffusion q(x_t | x_{timestep-1}) and others
         self.register_buffer("sqrt_alphas_cumprod", to_torch(np.sqrt(alphas_cumprod)))
         self.register_buffer(
             "sqrt_one_minus_alphas_cumprod", to_torch(np.sqrt(1.0 - alphas_cumprod))
@@ -111,7 +111,7 @@ class GaussianDiffusion(nn.Module):
             "sqrt_recipm1_alphas_cumprod", to_torch(np.sqrt(1.0 / alphas_cumprod - 1))
         )
 
-        # calculations for posterior q(x_{t-1} | x_t, x_0)
+        # calculations for posterior q(x_{timestep-1} | x_t, x_0)
         posterior_variance = (
                 betas * (1.0 - alphas_cumprod_prev) / (1.0 - alphas_cumprod)
         )
@@ -153,39 +153,39 @@ class GaussianDiffusion(nn.Module):
                 - extract(self.sqrt_recipm1_alphas_cumprod, t, x_t.shape) * noise
         )
 
-    def q_posterior(self, x_start, x_t, t):
+    def q_posterior(self, x_start, x_t, timestep):
         posterior_mean = (
-                extract(self.posterior_mean_coef1, t, x_t.shape) * x_start
-                + extract(self.posterior_mean_coef2, t, x_t.shape) * x_t
+                extract(self.posterior_mean_coef1, timestep, x_t.shape) * x_start
+                + extract(self.posterior_mean_coef2, timestep, x_t.shape) * x_t
         )
-        posterior_variance = extract(self.posterior_variance, t, x_t.shape)
+        posterior_variance = extract(self.posterior_variance, timestep, x_t.shape)
         posterior_log_variance_clipped = extract(
-            self.posterior_log_variance_clipped, t, x_t.shape
+            self.posterior_log_variance_clipped, timestep, x_t.shape
         )
         return posterior_mean, posterior_variance, posterior_log_variance_clipped
 
-    def p_mean_variance(self, x, cond, t, clip_denoised: bool):
+    def p_mean_variance(self, x, cond, timestep, clip_denoised: bool):
         x_recon = self.predict_start_from_noise(
-            x, t=t, noise=self.denoise_fn(x, t, cond=cond)
+            x, t=timestep, noise=self.denoise_fn(x, timestep, cond=cond)
         )
 
         if clip_denoised:
             x_recon.clamp_(-1.0, 1.0)
 
         model_mean, posterior_variance, posterior_log_variance = self.q_posterior(
-            x_start=x_recon, x_t=x, t=t
+            x_start=x_recon, x_t=x, timestep=timestep
         )
         return model_mean, posterior_variance, posterior_log_variance
 
     @torch.no_grad()
-    def p_sample(self, x, cond, t, clip_denoised=False, repeat_noise=False):
+    def p_sample(self, x, cond, timestep, clip_denoised=False, repeat_noise=False):
         b, *_, device = *x.shape, x.device
         model_mean, _, model_log_variance = self.p_mean_variance(
-            x=x, cond=cond, t=t, clip_denoised=clip_denoised
+            x=x, cond=cond, timestep=timestep, clip_denoised=clip_denoised
         )
         noise = noise_like(x.shape, device, repeat_noise)
-        # no noise when t == 0
-        nonzero_mask = (1 - (t == 0).float()).reshape(b, *((1,) * (len(x.shape) - 1)))
+        # no noise when timestep == 0
+        nonzero_mask = (1 - (timestep == 0).float()).reshape(b, *((1,) * (len(x.shape) - 1)))
         return model_mean + nonzero_mask * (0.5 * model_log_variance).exp() * noise
 
     @torch.no_grad()
@@ -194,10 +194,9 @@ class GaussianDiffusion(nn.Module):
 
         b = shape[0]
         img = torch.randn(shape, device=device)
-
-        for i in reversed(range(0, self.num_timesteps)):
+        for timestep in reversed(range(0, self.num_timesteps)):
             img = self.p_sample(
-                img, cond, torch.full((b,), i, device=device, dtype=torch.long)
+                img, cond, torch.full((b,), timestep, device=device, dtype=torch.long)
             )
         return img
 
@@ -212,8 +211,8 @@ class GaussianDiffusion(nn.Module):
         x_hat = self.p_sample_loop(shape, cond)  # TODO reshape x_hat to (B,T,-1)
         # log.info(f'sample x_hat shape : {x_hat.shape}')
 
-        if self.scale is not None:
-            x_hat *= self.scale
+        # if self.scale is not None:
+        #     x_hat *= self.scale
         # log.info(f'sample x_hat shape : {x_hat.shape}')
         return x_hat
 

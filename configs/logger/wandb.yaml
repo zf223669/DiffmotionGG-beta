@@ -10,7 +10,7 @@ wandb:
   project: "Gesture Generation"
   log_model: False # upload lightning ckpts
   prefix: "ZF" # a string to put at the beginning of metric keys
-  # entity: "" # set to name of your wandb team
+  entity: "cuz" # set to name of your wandb team
   group: "cuzai"
   tags: []
   job_type: ""

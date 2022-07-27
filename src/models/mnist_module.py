@@ -51,7 +51,7 @@ class MNISTLitModule(LightningModule):
 
     def on_train_start(self):
         # by default lightning executes validation step sanity checks before training starts,
-        # so we need to make sure val_acc_best doesn't store accuracy from these checks
+        # so we need to make sure val_acc_best doesn'timestep store accuracy from these checks
         self.val_acc_best.reset()
 
     def step(self, batch: Any):

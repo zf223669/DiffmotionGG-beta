@@ -58,7 +58,7 @@ class IndependentDistributionOutput(DistributionOutput):
         return Independent(distr, 1)
 
     def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
+            self, distr_args, scale: Optional[torch.Tensor] = None
     ) -> Distribution:
 
         distr = self.independent(self.distr_cls(*distr_args))
@@ -125,7 +125,7 @@ class PoissonOutput(IndependentDistributionOutput):
         return (rate_pos.squeeze(-1),)
 
     def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
+            self, distr_args, scale: Optional[torch.Tensor] = None
     ) -> Distribution:
         (rate,) = distr_args
 
@@ -152,7 +152,7 @@ class ZeroInflatedPoissonOutput(IndependentDistributionOutput):
         return gate_unit.squeeze(-1), rate_pos.squeeze(-1)
 
     def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
+            self, distr_args, scale: Optional[torch.Tensor] = None
     ) -> Distribution:
         gate, rate = distr_args
 
@@ -177,7 +177,7 @@ class NegativeBinomialOutput(IndependentDistributionOutput):
         return total_count.squeeze(-1), logits.squeeze(-1)
 
     def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
+            self, distr_args, scale: Optional[torch.Tensor] = None
     ) -> Distribution:
         total_count, logits = distr_args
 
@@ -205,7 +205,7 @@ class ZeroInflatedNegativeBinomialOutput(IndependentDistributionOutput):
         return gate.squeeze(-1), total_count.squeeze(-1), logits.squeeze(-1)
 
     def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
+            self, distr_args, scale: Optional[torch.Tensor] = None
     ) -> Distribution:
         gate, total_count, logits = distr_args
 
@@ -258,7 +258,7 @@ class StudentTMixtureOutput(DistributionOutput):
         )
 
     def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
+            self, distr_args, scale: Optional[torch.Tensor] = None
     ) -> Distribution:
         mix_logits, df, loc, dist_scale = distr_args
 
@@ -282,7 +282,7 @@ class PiecewiseLinearOutput(DistributionOutput):
     def __init__(self, num_pieces: int) -> None:
         super().__init__(self)
         assert (
-            isinstance(num_pieces, int) and num_pieces > 1
+                isinstance(num_pieces, int) and num_pieces > 1
         ), "num_pieces should be an integer larger than 1"
 
         self.num_pieces = num_pieces
@@ -299,9 +299,9 @@ class PiecewiseLinearOutput(DistributionOutput):
         return gamma.squeeze(axis=-1), slopes_proj, knot_spacings_proj
 
     def distribution(
-        self,
-        distr_args,
-        scale: Optional[torch.Tensor] = None,
+            self,
+            distr_args,
+            scale: Optional[torch.Tensor] = None,
     ) -> PiecewiseLinear:
         if scale is None:
             return self.distr_cls(*distr_args)
@@ -332,7 +332,7 @@ class NormalMixtureOutput(DistributionOutput):
         return mix_logits.squeeze(-1), loc.squeeze(-1), scale.squeeze(-1)
 
     def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
+            self, distr_args, scale: Optional[torch.Tensor] = None
     ) -> Distribution:
         mix_logits, loc, dist_scale = distr_args
 
@@ -352,11 +352,11 @@ class NormalMixtureOutput(DistributionOutput):
 class LowRankMultivariateNormalOutput(DistributionOutput):
     @validated()
     def __init__(
-        self,
-        dim: int,
-        rank: int,
-        sigma_init: float = 1.0,
-        sigma_minimum: float = 1e-3,
+            self,
+            dim: int,
+            rank: int,
+            sigma_init: float = 1.0,
+            sigma_minimum: float = 1e-3,
     ) -> None:
         self.distr_cls = LowRankMultivariateNormal
         self.dim = dim
@@ -410,7 +410,7 @@ class MultivariateNormalOutput(DistributionOutput):
         return loc, scale_tril
 
     def distribution(
-        self, distr_args, scale: Optional[torch.Tensor] = None
+            self, distr_args, scale: Optional[torch.Tensor] = None
     ) -> Distribution:
         loc, scale_tri = distr_args
         distr = MultivariateNormal(loc=loc, scale_tril=scale_tri)
@@ -475,12 +475,12 @@ class DiffusionOutput(DistributionOutput):
 
 class QuantilePtArgProj(PtArgProj):
     def __init__(
-        self,
-        in_features: int,
-        output_domain_cls: nn.Module,
-        args_dim: Dict[str, int],
-        domain_map: Callable[..., Tuple[torch.Tensor]],
-        **kwargs,
+            self,
+            in_features: int,
+            output_domain_cls: nn.Module,
+            args_dim: Dict[str, int],
+            domain_map: Callable[..., Tuple[torch.Tensor]],
+            **kwargs,
     ):
         super().__init__(in_features, args_dim, domain_map, **kwargs)
         self.output_domain_cls = output_domain_cls
@@ -518,7 +518,7 @@ class ImplicitQuantileOutput(IndependentDistributionOutput):
             "Unit": nn.Softmax,
         }
         assert (
-            output_domain in available_domain_map_cls.keys()
+                output_domain in available_domain_map_cls.keys()
         ), "Only the following output domains are allowed: {}".format(
             available_domain_map_cls.keys()
         )
@@ -549,9 +549,9 @@ class ImplicitQuantileOutput(IndependentDistributionOutput):
         return self.args_proj(in_features)
 
     def distribution(
-        self,
-        distr_args,
-        scale: Optional[torch.Tensor] = None,
+            self,
+            distr_args,
+            scale: Optional[torch.Tensor] = None,
     ) -> ImplicitQuantile:
 
         args_proj = self.get_args_proj(self.in_features)
@@ -572,3 +572,46 @@ class ImplicitQuantileOutput(IndependentDistributionOutput):
     @property
     def event_shape(self) -> Tuple:
         return ()
+
+
+class GaussianDiag:
+    Log2PI = float(np.log(2 * np.pi))
+
+    def likelihood(self, x):
+        """
+        lnL = -1/2 * { ln|Var| + ((X - Mu)^T)(Var^-1)(X - Mu) + kln(2*PI) }
+              k = 1 (Independent)
+              Var = logs ** 2
+        """
+        return -0.5 * (((x) ** 2) + GaussianDiag.Log2PI)
+
+    def logp(self, x):
+        likelihood = self.likelihood(x)
+        return self.sum(likelihood, dim=[1, 2])
+
+    def sample(self, z_shape, eps_std=None, device=None):
+        eps_std = eps_std or 1
+        print(f'GaussianDiag sample z_shape: {z_shape}')
+        eps = torch.normal(mean=torch.zeros(z_shape),
+                           std=torch.ones(z_shape) * eps_std)
+        #  normal(): 返回从均值means和标准差stds的离散正态分布中抽样随机张量
+        #  randn（）：生成满足标准正态分布（0~1）的随机张量
+        #  rand（）：返回从区间【0，1）的均匀分布中抽取的一组随机数
+        print(f'GaussianDiag sample eps shape: {eps.shape}')
+        eps = eps.to(device)
+        return eps
+
+    def sum(tensor, dim=None, keepdim=False):
+        if dim is None:
+            # sum up all dim
+            return torch.sum(tensor)
+        else:
+            if isinstance(dim, int):
+                dim = [dim]
+            dim = sorted(dim)
+            for d in dim:
+                tensor = tensor.sum(dim=d, keepdim=True)
+            if not keepdim:
+                for i, d in enumerate(dim):
+                    tensor.squeeze_(d - i)
+            return tensor
