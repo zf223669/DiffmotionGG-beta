@@ -591,7 +591,7 @@ class GaussianDiag:
 
     def sample(self, z_shape, eps_std=None, device=None):
         eps_std = eps_std or 1
-        print(f'GaussianDiag sample z_shape: {z_shape}')
+        # print(f'GaussianDiag sample z_shape: {z_shape}')
         eps = torch.normal(mean=torch.zeros(z_shape),
                            std=torch.ones(z_shape) * eps_std)
         #  normal(): 返回从均值means和标准差stds的离散正态分布中抽样随机张量
