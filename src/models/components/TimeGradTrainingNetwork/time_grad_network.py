@@ -155,13 +155,20 @@ class TimeGradTrainingNetwork(nn.Module):
             x_input: torch.Tensor,
             cond: torch.Tensor, ):
 
-        x_input_scaled, _ = self.actnorm(x_input, None, reverse=False)
-        combined_input = torch.cat((x_input_scaled, cond), dim=-1)
-
-        rnn_outputs, state = self.rnn(combined_input)
-        distr_args = self.distr_args(rnn_outputs=rnn_outputs)
-        likelihoods = self.diffusion.log_prob(x_input_scaled, distr_args).unsqueeze(-1)
+        # x_input_scaled, _ = self.actnorm(x_input, None, reverse=False)
+        # combined_input = torch.cat((x_input_scaled, cond), dim=-1)
+        #
+        # rnn_outputs, state = self.rnn(combined_input)
+        # distr_args = self.distr_args(rnn_outputs=rnn_outputs)
+        # likelihoods = self.diffusion.log_prob(x_input_scaled, distr_args).unsqueeze(-1)
         # log.info(f'likelihoods shape: {likelihoods}')
+
+        # without x_input to rnn
+        rnn_outputs, state = self.rnn(cond)
+        x_input_scaled, _ = self.actnorm(x_input, None, reverse=False)
+        # distr_args = self.distr_args(rnn_outputs=rnn_outputs)
+        likelihoods = self.diffusion.log_prob(x_input_scaled, rnn_outputs).unsqueeze(-1)
+
         return likelihoods, likelihoods.mean()
 
 
@@ -170,6 +177,7 @@ class TimeGradPredictionNetwork(TimeGradTrainingNetwork):
         super().__init__(**kwargs)
         # self.init_rnn = True
         self.bvh_save_path = bvh_save_path
+
         log.info(f"-------------------Init TimeGradPredictionNetwork----------------")
 
         # for decoding the lags are shifted by one,
@@ -207,16 +215,17 @@ class TimeGradPredictionNetwork(TimeGradTrainingNetwork):
             sampled_all: torch.Tensor,
             seqlen: int,
             n_lookahead: int,
-            scale: torch.Tensor,
+            # scale: torch.Tensor,
     ) -> torch.Tensor:
         # torch.set_printoptions(threshold=sys.maxsize)
         np.set_printoptions(threshold=500)
         future_samples = sampled_all.cpu().numpy()  # [0,0,0,0,0,,,,,,] shape:[80,380,45]
         log.info(f'future_samples :{future_samples.shape}')
-        if self.scaling:
-            self.diffusion.scale = scale
+        # if self.scaling:
+        #     self.diffusion.scale = scale
         autoreg = autoreg
         states = begin_states
+        # self.actnorm.inited = True
 
         # for each future time-units we draw new samples for this time-unit
         # and update the state
@@ -237,7 +246,9 @@ class TimeGradPredictionNetwork(TimeGradTrainingNetwork):
             # distr_args = self.distr_args(rnn_outputs=rnn_output)
             # log.info(f'rnn_outputs shape: {rnn_outputs.shape}')
             # (batch_size, 1, target_dim)
-            new_samples = self.diffusion.sample(combined_cond)
+            rnn_outputs, state = self.rnn(combined_cond)
+            # distr_args = self.distr_args(rnn_outputs=rnn_outputs)
+            new_samples = self.diffusion.sample(cond=rnn_outputs)
             new_samples, _ = self.actnorm(new_samples, None, reverse=True)
             # log.info(f'new_samples : {type(new_samples)}, device: {new_samples.device}')
             new_samples = new_samples.cpu().numpy()[:, 0, :]
@@ -253,7 +264,7 @@ class TimeGradPredictionNetwork(TimeGradTrainingNetwork):
             # log.info(f'new_samples[:, None, :] shape : {new_samples[:, None, :].shape}')
             autoreg = np.concatenate((autoreg[:, 1:, :].copy(), new_samples[:, None, :]), axis=1)
             autoreg = torch.from_numpy(autoreg).cuda()
-            print(f'--->autoreg shape:{autoreg.shape} \n {autoreg}')
+            # print(f'--->autoreg shape:{autoreg.shape} \n {autoreg}')
         # (batch_size * num_samples, prediction_length, target_dim)
         # samples = torch.cat(future_samples, dim=1)
         log.info(f'samples length: {future_samples.size}')
@@ -279,12 +290,12 @@ class TimeGradPredictionNetwork(TimeGradTrainingNetwork):
         # combined_input = torch.cat((z, combined_cond), dim=-1)  # [80,1,972]
         #
         # rnn_output, state, scale, inputs = self.unroll_encoder(x_input=z, cond=control, combined_input=combined_input, reverse=True)
-
-        x = self.sampling_decoder(autoreg=autoreg, control_all=control_all, begin_states=None,
+        # log.info(f'prediction rnn paameters {self.rnn.parameters()}')
+        sampled_all = self.sampling_decoder(autoreg=autoreg, control_all=control_all, begin_states=None,
                                   sampled_all=sampled_all,
                                   seqlen=seqlen, n_lookahead=n_lookahead,
                                   )
         # log.info(f'final x shape: {x.shape} x = \n {x}')
         datamodule.save_animation(control_all[:, :(n_timesteps - n_lookahead), :], sampled_all,
                                   self.bvh_save_path)
-        return x
+        return sampled_all

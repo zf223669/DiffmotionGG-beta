@@ -6,6 +6,7 @@ import wandb
 from pytorch_lightning import LightningModule
 from torchmetrics import MaxMetric
 from torchmetrics.classification.accuracy import Accuracy
+from gluonts.torch.util import copy_parameters
 from src import utils
 import hydra
 import omegaconf
@@ -86,13 +87,24 @@ class GestureTimeGradLightingModule(LightningModule):
     def validation_epoch_end(self, outputs: List[Any]):
         pass
 
+    def on_test_start(self):
+        # log.info('-----------------on_test_start--------------')
+        copy_parameters(self.train_net, self.prediction_net)
+        # for name, train_net_para in self.train_net.named_parameters():
+        #     log.info(f'train_net_para: {name}:\n {train_net_para.data}')
+        # log.info('\n')
+        # for name, prediction_net_para in self.prediction_net.named_parameters():
+        #     # log.info(f'prediction_net_para: {name}:\n {prediction_net_para.data}')
+        #     log.info(f'prediction_net_para: {name}:\n {prediction_net_para.data}')
+
     def test_step(self, batch: Any, batch_idx: int):
         # ipdb.set_trace()
         autoreg_all = batch["autoreg"].cuda()  # [20, 400, 45]
         # log.info(f'test_step -> autoreg_all shape: {autoreg_all.shape} \n {autoreg_all}')
-        control_all = batch["control"].cuda() # [80,400,27]
+        control_all = batch["control"].cuda()  # [80,400,27]
         trainer = self.trainer
         output = self.prediction_net.forward(autoreg_all, control_all, trainer)
+        return output
 
     def test_epoch_end(self, outputs: List[Any]):
         # self.test_acc.reset()

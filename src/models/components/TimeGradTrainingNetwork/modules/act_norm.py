@@ -7,7 +7,9 @@ import scipy.linalg
 from . import thops
 import math
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
+from src import utils
 
+log = utils.get_pylogger(__name__)
 
 class _ActNorm(nn.Module):
     """
@@ -27,6 +29,7 @@ class _ActNorm(nn.Module):
         self.num_features = num_features
         self.scale = float(scale)
         self.inited = False
+        # self.inited = True
 
     def _check_input_dim(self, input):
         return NotImplemented
@@ -42,12 +45,16 @@ class _ActNorm(nn.Module):
             log_std = torch.log(self.scale / (torch.sqrt(vars) + 1e-6))  # learnable  BN`s normalize with log
             self.bias.data.copy_(bias.data)
             self.log_std.data.copy_(log_std.data)
+            # log.info(f'Act norm initialize_parameters bias: {self.bias}')
+            # log.info(f'Act norm initialize_parameters log_std: {self.log_std}')
+
             self.inited = True
 
     def _center(self, input, reverse=False):
         if not reverse:
             return input + self.bias
         else:
+            # log.info(f'Actnorm _center reverse bias: {self.bias}')
             return input - self.bias
 
     def _scale(self, input, logdet=None, reverse=False):
@@ -55,6 +62,7 @@ class _ActNorm(nn.Module):
         if not reverse:
             input = input * torch.exp(log_std)  # BN normalising
         else:
+            # log.info(f'Actnorm _center reverse log_std: {self.log_std}')
             input = input * torch.exp(-log_std)
         if logdet is not None:
             """

@@ -182,8 +182,8 @@ class GestureDataModule(LightningDataModule):
     def save_animation(self, control_data, motion_data, filename):
         print('-----save animation-------------')
         print(f'motion_data shape: {motion_data.shape}')
-        control_data = control_data.cpu().numpy()
-        motion_data = motion_data.cpu().numpy()
+        # control_data = control_data.cpu().numpy()
+        # motion_data = motion_data.cpu().numpy()
         anim_clips = self.inv_standardize(motion_data[:self.n_test, :, :], self.output_scaler)
         print(f'anim_clips shape: {anim_clips.shape}')
         np.savez(filename + ".npz", clips=anim_clips)

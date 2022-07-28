@@ -6,4 +6,5 @@ seqlen: 5
 n_lookahead: 20
 dropout: 0
 batch_size: 80
-input_size: 972
+# input_size: 972
+input_size: 927
