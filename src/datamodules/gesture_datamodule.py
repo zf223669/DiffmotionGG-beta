@@ -28,7 +28,7 @@ class GestureDataModule(LightningDataModule):
                  # test: int = 0,
                  ):
         super(GestureDataModule, self).__init__()
-
+        # region variable define
         self.test_output = None
         self.val_output = None
         self.val_input = None
@@ -56,7 +56,7 @@ class GestureDataModule(LightningDataModule):
         self.dropout = dropout
         self.batch_size = batch_size
         self.feature_length = None
-
+        # endregion
         # this line allows to access init params with 'self.hparams' attribute
         self.save_hyperparameters(logger=False)
 
@@ -179,13 +179,13 @@ class GestureDataModule(LightningDataModule):
         scaled = scaler.inverse_transform(flat).reshape(shape)
         return scaled
 
-    def save_animation(self, control_data, motion_data, filename):
+    def save_animation(self, motion_data, filename):
         print('-----save animation-------------')
-        print(f'motion_data shape: {motion_data.shape}')
+        # print(f'motion_data shape: {motion_data.shape}')
         # control_data = control_data.cpu().numpy()
         # motion_data = motion_data.cpu().numpy()
         anim_clips = self.inv_standardize(motion_data[:self.n_test, :, :], self.output_scaler)
-        print(f'anim_clips shape: {anim_clips.shape}')
+        # print(f'anim_clips shape: {anim_clips.shape}')
         np.savez(filename + ".npz", clips=anim_clips)
         self.write_bvh(anim_clips, filename)
 

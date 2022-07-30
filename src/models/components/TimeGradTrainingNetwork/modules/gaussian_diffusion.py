@@ -8,6 +8,7 @@ from torch import nn, einsum
 import torch.nn.functional as F
 import logging as log
 logger = log.getLogger('test')
+from src.models.components.TimeGradTrainingNetwork.modules.distribution_output import GaussianDiag
 
 def default(val, d):
     if val is not None:
@@ -57,6 +58,7 @@ class GaussianDiffusion(nn.Module):
         self.denoise_fn = denoise_fn
         self.input_size = input_size
         self.__scale = None
+        self.normal_distribution = GaussianDiag()
         # self.step = 1
 
         if betas is not None:
@@ -67,7 +69,7 @@ class GaussianDiffusion(nn.Module):
             )
         else:
             if beta_schedule == "linear":
-                betas = np.linspace(1e-4, beta_end, 100)
+                betas = np.linspace(1e-4, beta_end, diff_steps)
             elif beta_schedule == "quad":
                 betas = np.linspace(1e-4 ** 0.5, beta_end ** 0.5, diff_steps) ** 2
             elif beta_schedule == "const":
@@ -193,7 +195,8 @@ class GaussianDiffusion(nn.Module):
         device = self.betas.device
 
         b = shape[0]
-        img = torch.randn(shape, device=device)
+        # img = torch.randn(shape, device=device)
+        img = self.normal_distribution.sample(shape, 1, device=cond.device)
         for timestep in reversed(range(0, self.num_timesteps)):
             img = self.p_sample(
                 img, cond, torch.full((b,), timestep, device=device, dtype=torch.long)
@@ -264,8 +267,8 @@ class GaussianDiffusion(nn.Module):
         return loss
 
     def log_prob(self, x, cond, *args, **kwargs):
-        if self.scale is not None:
-            x /= self.scale
+        # if self.scale is not None:
+        #     x /= self.scale
 
         B, T, _ = x.shape
 

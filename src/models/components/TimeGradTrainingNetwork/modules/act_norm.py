@@ -11,6 +11,7 @@ from src import utils
 
 log = utils.get_pylogger(__name__)
 
+
 class _ActNorm(nn.Module):
     """
     Activation Normalization
@@ -23,8 +24,8 @@ class _ActNorm(nn.Module):
     def __init__(self, num_features, scale=1.):
         super().__init__()
         # register mean and scale
-        size = [1, 1,num_features]  # [1,45,1]
-        self.register_parameter("bias", nn.Parameter(torch.zeros(*size)))  # [1,45,1] [0,0,0,0,0,0,,,,,,0]
+        size = [1, 1, num_features]  # [1,1,45]
+        self.register_parameter("bias", nn.Parameter(torch.zeros(*size)))  # [1,1,45] [0,0,0,0,0,0,,,,,,0]
         self.register_parameter("log_std", nn.Parameter(torch.zeros(*size)))  # log_std
         self.num_features = num_features
         self.scale = float(scale)
@@ -40,8 +41,8 @@ class _ActNorm(nn.Module):
             return
         assert input.device == self.bias.device
         with torch.no_grad():
-            bias = thops.mean(input.clone(), dim=[0, 1], keepdim=True) * -1.0  # learnable [1,45,1] μb
-            vars = thops.mean((input.clone() + bias) ** 2, dim=[0, 1], keepdim=True)  # [1,45,1] sigma ** 2
+            bias = thops.mean(input.clone(), dim=[0, 1], keepdim=True) * -1.0  # learnable [1,1,,45] μb
+            vars = thops.mean((input.clone() + bias) ** 2, dim=[0, 1], keepdim=True)  # [1,1,,45] sigma ** 2
             log_std = torch.log(self.scale / (torch.sqrt(vars) + 1e-6))  # learnable  BN`s normalize with log
             self.bias.data.copy_(bias.data)
             self.log_std.data.copy_(log_std.data)

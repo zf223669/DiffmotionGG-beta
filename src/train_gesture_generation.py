@@ -27,6 +27,7 @@ def main(cfg: DictConfig) -> float:
 
     # safely retrieve metric value for hydra-based hyperparameter optimization
     metric_value = get_metric_value(
+
         metric_dict=metric_dict, metric_name=cfg.get("optimized_metric")
     )
 

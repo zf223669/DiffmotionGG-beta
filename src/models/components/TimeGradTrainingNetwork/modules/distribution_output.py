@@ -597,7 +597,7 @@ class GaussianDiag:
         #  normal(): 返回从均值means和标准差stds的离散正态分布中抽样随机张量
         #  randn（）：生成满足标准正态分布（0~1）的随机张量
         #  rand（）：返回从区间【0，1）的均匀分布中抽取的一组随机数
-        print(f'GaussianDiag sample eps shape: {eps.shape}')
+        # print(f'GaussianDiag sample eps shape: {eps.shape}')
         eps = eps.to(device)
         return eps
 

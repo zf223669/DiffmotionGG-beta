@@ -4,7 +4,7 @@ optimizer:
   _target_: torch.optim.Adam
   _partial_: true
   lr: 0.0015
-  weight_decay: 0.0
+  weight_decay: 0
 
 train_net:
   _target_: src.models.components.TimeGradTrainingNetwork.time_grad_network.TimeGradTrainingNetwork
@@ -15,7 +15,7 @@ train_net:
   prediction_length: 24
   dropout_rate: 0.1
   target_dim: 45
-  conditioning_length: 512
+  conditioning_length: 100
   diff_steps: 100
   loss_type: 'l2'
   beta_end: 0.1

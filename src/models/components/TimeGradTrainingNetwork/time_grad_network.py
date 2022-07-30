@@ -72,7 +72,7 @@ class TimeGradTrainingNetwork(nn.Module):
         self.scaling = scaling
 
         self.cell_type = cell_type
-        self.init_rnn = True
+        # self.init_rnn = True
 
         rnn_cls = {"LSTM": nn.LSTM, "GRU": nn.GRU}[cell_type]
         self.rnn = rnn_cls(
@@ -163,10 +163,14 @@ class TimeGradTrainingNetwork(nn.Module):
         # log.info(f'likelihoods shape: {likelihoods}')
 
         # without x_input to rnn
-        rnn_outputs, state = self.rnn(cond)
+
+        # index_embeddings = self.embed(self.time_index)
+        # combined_cond = torch.cat((cond, index_embeddings), dim=-1)
+
+        rnn_outputs, _ = self.rnn(cond)
         x_input_scaled, _ = self.actnorm(x_input, None, reverse=False)
-        # istr_args = self.distr_args(rnn_outputs=rnn_outputs)
-        likelihoods = self.diffusion.log_prob(x_input_scaled, rnn_outputs).unsqueeze(-1)
+        distr_args = self.distr_args(rnn_outputs=rnn_outputs)
+        likelihoods = self.diffusion.log_prob(x_input_scaled, distr_args).unsqueeze(-1)
 
         return likelihoods, likelihoods.mean()
 
@@ -175,9 +179,11 @@ class TimeGradPredictionNetwork(TimeGradTrainingNetwork):
     def __init__(self, bvh_save_path: str, **kwargs) -> None:
         super().__init__(**kwargs)
         # self.init_rnn = True
+        self.state = None
         self.bvh_save_path = bvh_save_path
 
         log.info(f"-------------------Init TimeGradPredictionNetwork----------------")
+        self.inited_rnn = False
 
         # for decoding the lags are shifted by one,
         # at the first time-step of the decoder a lag of one corresponds to
@@ -197,74 +203,69 @@ class TimeGradPredictionNetwork(TimeGradTrainingNetwork):
         # log.info(f'jt_data shape: {jt_data.shape}, ctrl_data shape: {ctrl_data.shape}')
         # #jt_data [80,225]  ctrl_data [80,702]
         cond = torch.cat((jt_data, ctrl_data), 1)  # [80,927]
-        # log.info(f'pre')
-        # cond1 = torch.unsqueeze(cond, -1)
-        # cond1 = torch.swapaxes(cond1, 1, 2) # [80, 1, 927]
-
         cond = torch.unsqueeze(cond, 1)  # [80,1,927]
-        # log.info(cond1.equal(cond2))
-        # log.info(f'prepare_cond cond shape: {cond.shape}')
+
         return cond
 
-    def sampling_decoder(
-            self,
-            autoreg: torch.Tensor,
-            begin_states: Union[List[torch.Tensor], torch.Tensor],
-            control_all: torch.Tensor,
-            sampled_all: torch.Tensor,
-            seqlen: int,
-            n_lookahead: int,
-            # scale: torch.Tensor,
-    ) -> torch.Tensor:
-        # torch.set_printoptions(threshold=sys.maxsize)
-        np.set_printoptions(threshold=500)
-        future_samples = sampled_all.cpu().numpy().copy()  # [0,0,0,0,0,,,,,,] shape:[80,380,45]
-        log.info(f'future_samples :{future_samples.shape}')
-        # if self.scaling:
-        #     self.diffusion.scale = scale
-        autoreg = autoreg
-        states = begin_states
-        self.prediction_length = future_samples.shape[1]
-        # self.actnorm.inited = True
-
-        # for each future time-units we draw new samples for this time-unit
-        # and update the state
-
-        for k in tqdm(range(control_all.shape[1] - seqlen - n_lookahead)):
-            # log.info(f'prediction_length = {self.prediction_length}')
-            # log.info(f'k = {k} ; control_length  = {k + seqlen + 1 + n_lookahead} ')
-            control = control_all[:, k:(k + seqlen + 1 + n_lookahead), :]
-            # log.info(f'control shape: {control.shape}')
-            # log.info(f'autoreg shape: {autoreg.shape}')
-            combined_cond = self.prepare_cond(autoreg, control)
-            # log.info(f'cond shape: {combined_cond.shape}')
-            # z = self.normal_distribution.sample([80, 1, 45], 1e-08, "cuda:0")
-            # log.info(f'z shape: {z.shape}')
-
-            rnn_outputs, state = self.rnn(combined_cond)
-            # distr_args = self.distr_args(rnn_outputs=rnn_outputs)
-            new_samples = self.diffusion.sample(cond=rnn_outputs)
-            new_samples, _ = self.actnorm(new_samples, None, reverse=True)
-            # log.info(f'new_samples : {type(new_samples)}, device: {new_samples.device}')
-            new_samples = new_samples.cpu().numpy()[:, 0, :]
-            # new_samples = new_samples[:, 0, :]
-            future_samples[:, (k + seqlen), :] = new_samples
-            # (batch_size, seq_len, target_dim)
-            # future_samples.append(new_samples)
-
-            # log.info(f'new_samples: \n{new_samples} \n future_samples: {future_samples}')
-            autoreg = autoreg.cpu().numpy()
-            # log.info(
-            #     f'new_samples shape: {new_samples.shape} , future_samples shape: {future_samples.shape}, autoreg shape: {autoreg.shape}')
-            # log.info(f'new_samples[:, None, :] shape : {new_samples[:, None, :].shape}')
-            autoreg = np.concatenate((autoreg[:, 1:, :].copy(), new_samples[:, None, :]), axis=1)
-            autoreg = torch.from_numpy(autoreg).cuda()
-            # print(f'--->autoreg shape:{autoreg.shape} \n {autoreg}')
-        # (batch_size * num_samples, prediction_length, target_dim)
-        # samples = torch.cat(future_samples, dim=1)
-        log.info(f'samples length: {future_samples.size} type {type(future_samples)} future_samples: {future_samples} ')
-        # (batch_size, num_samples, prediction_length, target_dim)
-        return future_samples
+    # def sampling_decoder(
+    #         self,
+    #         autoreg: torch.Tensor,
+    #         begin_states: Union[List[torch.Tensor], torch.Tensor],
+    #         control_all: torch.Tensor,
+    #         sampled_all: torch.Tensor,
+    #         seqlen: int,
+    #         n_lookahead: int,
+    #         # scale: torch.Tensor,
+    # ) -> torch.Tensor:
+    #     # torch.set_printoptions(threshold=sys.maxsize)
+    #     np.set_printoptions(threshold=500)
+    #     future_samples = sampled_all.cpu().numpy().copy()  # [0,0,0,0,0,,,,,,] shape:[80,380,45]
+    #     # log.info(f'future_samples :{future_samples.shape}')
+    #     # if self.scaling:
+    #     #     self.diffusion.scale = scale
+    #     autoreg = autoreg
+    #     states = begin_states
+    #     self.prediction_length = future_samples.shape[1]
+    #     # self.actnorm.inited = True
+    #
+    #     # for each future time-units we draw new samples for this time-unit
+    #     # and update the state
+    #
+    #     for k in tqdm(range(control_all.shape[1] - seqlen - n_lookahead)):
+    #         # log.info(f'prediction_length = {self.prediction_length}')
+    #         # log.info(f'k = {k} ; control_length  = {k + seqlen + 1 + n_lookahead} ')
+    #         control = control_all[:, k:(k + seqlen + 1 + n_lookahead), :]
+    #         # log.info(f'control shape: {control.shape}')
+    #         # log.info(f'autoreg shape: {autoreg.shape}')
+    #         combined_cond = self.prepare_cond(autoreg, control)
+    #         # log.info(f'cond shape: {combined_cond.shape}')
+    #         # z = self.normal_distribution.sample([80, 1, 45], 1e-08, "cuda:0")
+    #         # log.info(f'z shape: {z.shape}')
+    #
+    #         rnn_outputs, state = self.rnn(combined_cond)
+    #         # distr_args = self.distr_args(rnn_outputs=rnn_outputs)
+    #         new_samples = self.diffusion.sample(cond=rnn_outputs)
+    #         new_samples, _ = self.actnorm(new_samples, None, reverse=True)
+    #         # log.info(f'new_samples : {type(new_samples)}, device: {new_samples.device}')
+    #         new_samples = new_samples.cpu().numpy()[:, 0, :]
+    #         # new_samples = new_samples[:, 0, :]
+    #         future_samples[:, (k + seqlen), :] = new_samples
+    #         # (batch_size, seq_len, target_dim)
+    #         # future_samples.append(new_samples)
+    #
+    #         # log.info(f'new_samples: \n{new_samples} \n future_samples: {future_samples}')
+    #         autoreg = autoreg.cpu().numpy()
+    #         # log.info(
+    #         #     f'new_samples shape: {new_samples.shape} , future_samples shape: {future_samples.shape}, autoreg shape: {autoreg.shape}')
+    #         # log.info(f'new_samples[:, None, :] shape : {new_samples[:, None, :].shape}')
+    #         autoreg = np.concatenate((autoreg[:, 1:, :].copy(), new_samples[:, None, :]), axis=1)
+    #         autoreg = torch.from_numpy(autoreg).cuda()
+    #         # print(f'--->autoreg shape:{autoreg.shape} \n {autoreg}')
+    #     # (batch_size * num_samples, prediction_length, target_dim)
+    #     # samples = torch.cat(future_samples, dim=1)
+    #     log.info(f'samples length: {future_samples.size} type {type(future_samples)} future_samples: {future_samples} ')
+    #     # (batch_size, num_samples, prediction_length, target_dim)
+    #     return future_samples
 
     def forward(self, autoreg_all, control_all, trainer) -> torch.Tensor:
         datamodule = trainer.datamodule
@@ -278,12 +279,32 @@ class TimeGradPredictionNetwork(TimeGradTrainingNetwork):
         sampled_all[:, :seqlen, :] = autoreg  # start pose [0,0,0,0,0]
 
         log.info('Sampling_decoder')
-        sampled_all_done = self.sampling_decoder(autoreg=autoreg, control_all=control_all, begin_states=None,
-                                                 sampled_all=sampled_all,
-                                                 seqlen=seqlen, n_lookahead=n_lookahead,
-                                                 )
-        # log.info(f'final x shape: {x.shape} x = \n {x}')
-        log.info(f'sampled_all: {sampled_all_done}, {type(sampled_all_done)}')
-        datamodule.save_animation(control_all[:, :(n_timesteps - n_lookahead), :], sampled_all_done,
-                                  self.bvh_save_path)
+        # np.set_printoptions(threshold=500)
+        future_samples = sampled_all.cpu().numpy().copy()  # [0,0,0,0,0,,,,,,] shape:[80,380,45]
+
+        # for each future time-units we draw new samples for this time-unit
+        # and update the state
+        for k in tqdm(range(control_all.shape[1] - seqlen - n_lookahead)):
+            control = control_all[:, k:(k + seqlen + 1 + n_lookahead), :]
+            combined_cond = self.prepare_cond(autoreg, control)
+            if not self.inited_rnn:
+                rnn_outputs, self.state = self.rnn(combined_cond)
+                self.inited_rnn = True
+            else:
+                rnn_outputs, state = self.rnn(combined_cond, self.state)
+            distr_args = self.distr_args(rnn_outputs=rnn_outputs)
+            new_samples = self.diffusion.sample(cond=distr_args)
+            new_samples, _ = self.actnorm(new_samples, None, reverse=True)
+            new_samples = new_samples.cpu().numpy()[:, 0, :]
+            future_samples[:, (k + seqlen), :] = new_samples
+            autoreg = autoreg.cpu().numpy()
+            autoreg = np.concatenate((autoreg[:, 1:, :].copy(), new_samples[:, None, :]), axis=1)
+            autoreg = torch.from_numpy(autoreg).cuda()
+
+        # sampled_all_done = self.sampling_decoder(autoreg=autoreg, control_all=control_all,
+        # begin_states=None, sampled_all=sampled_all, seqlen=seqlen, n_lookahead=n_lookahead, ) log.info(f'final x
+        # shape: {x.shape} x = \n {x}')
+
+        log.info(f'sampled_all: {future_samples}, {type(future_samples)}')
+        datamodule.save_animation(future_samples, self.bvh_save_path)
         return sampled_all
