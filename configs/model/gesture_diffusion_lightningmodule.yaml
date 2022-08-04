@@ -15,15 +15,16 @@ train_net:
   prediction_length: 24
   dropout_rate: 0.1
   target_dim: 45
-  conditioning_length: 100
+  conditioning_length: 512
   diff_steps: 100
   loss_type: 'l2'
   beta_end: 0.1
-  beta_schedule: 'linear'
+#  beta_schedule: 'linear'
+  beta_schedule: 'quad'
   residual_layers: 6
   residual_channels: 2
   dilation_cycle_length: 10
-  scaling: True
+  scaling: False
 
 prediction_net:
   _target_: src.models.components.TimeGradTrainingNetwork.time_grad_network.TimeGradPredictionNetwork
@@ -43,5 +44,7 @@ prediction_net:
   residual_channels: ${model.train_net.residual_channels}
   dilation_cycle_length: ${model.train_net.dilation_cycle_length}
   scaling: ${model.train_net.scaling}
+  num_parallel_samples: 100
   bvh_save_path: ${paths.output_dir}/bvh
+  quantile: 0.5
 

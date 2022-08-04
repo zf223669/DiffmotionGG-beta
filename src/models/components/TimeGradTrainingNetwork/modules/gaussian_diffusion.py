@@ -7,8 +7,10 @@ import torch
 from torch import nn, einsum
 import torch.nn.functional as F
 import logging as log
+
 logger = log.getLogger('test')
 from src.models.components.TimeGradTrainingNetwork.modules.distribution_output import GaussianDiag
+
 
 def default(val, d):
     if val is not None:
@@ -46,7 +48,7 @@ def cosine_beta_schedule(timesteps, s=0.008):
 class GaussianDiffusion(nn.Module):
     def __init__(
             self,
-            denoise_fn, # epsilon_theta
+            denoise_fn,  # epsilon_theta
             input_size,
             beta_end=0.1,  # β
             diff_steps=100,
@@ -76,7 +78,7 @@ class GaussianDiffusion(nn.Module):
                 betas = beta_end * np.ones(diff_steps)
             elif beta_schedule == "jsd":  # 1/T, 1/(T-1), 1/(T-2), ..., 1
                 betas = 1.0 / np.linspace(diff_steps, 1, diff_steps)
-            elif beta_schedule == "sigmoid":
+            elif beta_schedule == "sigmoid":  # dont work
                 betas = np.linspace(-6, 6, diff_steps)
                 betas = (beta_end - 1e-4) / (np.exp(-betas) + 1) + 1e-4
             elif beta_schedule == "cosine":
@@ -156,6 +158,7 @@ class GaussianDiffusion(nn.Module):
         )
 
     def q_posterior(self, x_start, x_t, timestep):
+        # log.info(f'timestep = {timestep}')
         posterior_mean = (
                 extract(self.posterior_mean_coef1, timestep, x_t.shape) * x_start
                 + extract(self.posterior_mean_coef2, timestep, x_t.shape) * x_t
@@ -191,12 +194,15 @@ class GaussianDiffusion(nn.Module):
         return model_mean + nonzero_mask * (0.5 * model_log_variance).exp() * noise
 
     @torch.no_grad()
-    def p_sample_loop(self, shape, cond):
+    def p_sample_loop(self, shape, cond, img):
         device = self.betas.device
 
         b = shape[0]
-        # img = torch.randn(shape, device=device)
-        img = self.normal_distribution.sample(shape, 1, device=cond.device)
+        if img is None:
+            # img = torch.randn(shape, device=device)
+            img = self.normal_distribution.sample(shape, 1, device=cond.device)
+        else:
+            img = img
         for timestep in reversed(range(0, self.num_timesteps)):
             img = self.p_sample(
                 img, cond, torch.full((b,), timestep, device=device, dtype=torch.long)
@@ -204,14 +210,14 @@ class GaussianDiffusion(nn.Module):
         return img
 
     @torch.no_grad()
-    def sample(self, sample_shape=torch.Size(), cond=None):
+    def sample(self, sample_shape=torch.Size(), cond=None, img=None):
         if cond is not None:
             shape = cond.shape[:-1] + (self.input_size,)
             # log.info(f'sample cond shape : {shape}')
             # TODO reshape cond to (B*T, 1, -1)
         else:
             shape = sample_shape
-        x_hat = self.p_sample_loop(shape, cond)  # TODO reshape x_hat to (B,T,-1)
+        x_hat = self.p_sample_loop(shape=shape, cond=cond, img=img)  # TODO reshape x_hat to (B,T,-1)
         # log.info(f'sample x_hat shape : {x_hat.shape}')
 
         # if self.scale is not None:
@@ -246,13 +252,13 @@ class GaussianDiffusion(nn.Module):
                 + extract(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise
         )
 
-    def p_losses(self, x_start, cond, t, noise=None):
+    def p_losses(self, x_start, cond, time_step, noise=None):
         # logger.info(f'-'* 5 + 'p_losses function ')
         # print(f"->>>>>>>>>>>>>>>p_losses function: {self.step}")
         noise = default(noise, lambda: torch.randn_like(x_start))
 
-        x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)  # p3/p4 in paper
-        x_recon = self.denoise_fn(x_noisy, t, cond=cond)  # EpsilonTheta() εΘ()
+        x_noisy = self.q_sample(x_start=x_start, t=time_step, noise=noise)  # p3/p4 in paper
+        x_recon = self.denoise_fn(x_noisy, time_step, cond=cond)  # EpsilonTheta() εΘ()
         # logger.info(f'-' * 5 + 'εΘ(sqrt(alpha_ba)*x_t^0 + sqrt(1-alpha_ba)*ε,h_t-1, noise)')
 
         if self.loss_type == "l1":

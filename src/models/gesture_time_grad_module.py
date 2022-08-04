@@ -49,7 +49,8 @@ class GestureTimeGradLightingModule(LightningModule):
         self.train_step_count = 1
 
     def forward(self, x: torch.Tensor, cond: torch.Tensor):
-        return self.train_net(x, cond)
+        trainer = self.trainer
+        return self.train_net(trainer,x, cond)
 
     def on_train_start(self):
         # by default lightning executes validation step sanity checks before training starts,
