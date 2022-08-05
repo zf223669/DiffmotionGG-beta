@@ -24,7 +24,9 @@ class GestureDataModule(LightningDataModule):
                  n_lookahead: int = 20,
                  dropout: float = 0.4,
                  batch_size: int = 80,
-                 input_size: int = 972
+                 input_size: int = 972,
+                 num_workers: int = 16
+
                  # test: int = 0,
                  ):
         super(GestureDataModule, self).__init__()
@@ -56,8 +58,10 @@ class GestureDataModule(LightningDataModule):
         self.dropout = dropout
         self.batch_size = batch_size
         self.feature_length = None
+        self.num_workers = num_workers
         # endregion
         # this line allows to access init params with 'self.hparams' attribute
+
         self.save_hyperparameters(logger=False)
 
     def prepare_data(self):
@@ -137,7 +141,7 @@ class GestureDataModule(LightningDataModule):
         train_data_loader = DataLoader(
             dataset=self.train_dataset,
             batch_size=self.batch_size,
-            num_workers=0,
+            num_workers=self.num_workers,
             shuffle=True,
             drop_last=True,
         )
@@ -147,7 +151,7 @@ class GestureDataModule(LightningDataModule):
         val_data_loader = DataLoader(
             dataset=self.validation_dataset,
             batch_size=self.batch_size,
-            num_workers=0,
+            num_workers=self.num_workers,
             shuffle=False,
             drop_last=True
         )
@@ -157,7 +161,7 @@ class GestureDataModule(LightningDataModule):
         test_data_loader = DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,
-            num_workers=0,
+            num_workers=self.num_workers,
             shuffle=False,
             drop_last=True
         )
@@ -167,7 +171,7 @@ class GestureDataModule(LightningDataModule):
         predict_data_loader = DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,
-            num_workers=0,
+            num_workers=self.num_workers,
             shuffle=False,
             drop_last=True
         )

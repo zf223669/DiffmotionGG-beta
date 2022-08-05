@@ -46,7 +46,7 @@ test: True
 
 # simply provide checkpoint path to resume training
 ckpt_path: null
-# ckpt_path: "/home/zf223669/Mount/DiffusionGestureGeneration/logs/gesture_generation/runs/2022-07-23_15-49-36/checkpoints/last.ckpt"
+# ckpt_path: "/home/zf223669/Mount/DiffusionGestureGeneration/logs/gesture_generation/multiruns/2022-08-05_01-29-55/15/checkpoints/last.ckpt"
 
 # seed for random number generators in pytorch, numpy and python.random
 seed: null

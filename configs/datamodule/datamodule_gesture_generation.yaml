@@ -8,4 +8,5 @@ dropout: 0.4
 batch_size: 80
 #input_size: 972
 input_size: 927
+num_workers: 16
 #input_size: 1017

@@ -44,7 +44,7 @@ prediction_net:
   residual_channels: ${model.train_net.residual_channels}
   dilation_cycle_length: ${model.train_net.dilation_cycle_length}
   scaling: ${model.train_net.scaling}
-  num_parallel_samples: 100
+  num_parallel_samples: 300
   bvh_save_path: ${paths.output_dir}/bvh
   quantile: 0.5
 
