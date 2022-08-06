@@ -4,7 +4,7 @@ data_dir: ${paths.data_dir} # data_dir is specified in config.yaml
 framerate: 20
 seqlen: 5
 n_lookahead: 20
-dropout: 0.4
+dropout: 0.2
 batch_size: 80
 #input_size: 972
 input_size: 927
