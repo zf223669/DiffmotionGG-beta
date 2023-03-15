@@ -32,6 +32,6 @@ scipy~=1.8.1
 scikit-learn~=1.0.2
 tqdm~=4.64.0
 packaging~=21.3
-setuptools~=63.1.0
+setuptools~=67.6.0
 ipython~=8.4.0
 joblib~=1.1.0
