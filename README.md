@@ -1,6 +1,6 @@
 # DiffMotion
-
-The code will be coming soon!
+# Abstract
+Speech-driven gesture synthesis is a field of growing interest in virtual human creation. However, a critical challenge is the inherent intricate one-to-many mapping between speech and gestures. Previous studies have explored and achieved significant progress with generative models. Notwithstanding, most synthetic gestures are still vastly less natural. This paper presents DiffMotion, a novel speech driven gesture synthesis architecture based on diffusion models. The model comprises an autoregressive temporal encoder and a denoising diffusion probability Module. The encoder extracts the temporal context of the speech input and historical gestures. The diffusion module learns a parameterized Markov chain to gradually convert a simple distribution into a complex distribution and generates the gestures according to the accompanied speech. Compared with baselines, objective and subjective evaluations confirm that our approach can produce natural and diverse gesticulation and demonstrate the benefits of diffusion-based models on speech-driven gesture synthesis.
 ## Environment
 python=3.10.5 pytorch=1.13 pytorch-lighting=1.6.5 hydra-core=1.2.0 CUDAtoolkit=11.7  
 ** We use [Lightning-Hydra-Template](https://github.com/ashleve/lightning-hydra-template) for combining the [pytorchLightning](https://www.pytorchlightning.ai/) and [Hydra](https://hydra.cc/).  
