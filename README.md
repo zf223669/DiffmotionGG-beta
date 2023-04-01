@@ -31,6 +31,15 @@ hardware: Geforce RTX 3090
 The trained model and the predicted bvh files will be saved in folder:  
 ./logs/gesture_generation/runs/yyyy-mm-day-hour-minute
 
+
+### train by multirun
+For example, we want to train the model by different parameters setting , we could execute the command below(you could list any parameters which are defined in *.yaml  and set them with any value you want):  
+`python train_gesture_generation.py --multirun model.train_net.diff_steps=100,500 datamodule.dropout=0,0.2,0.4,0.6`  
+reference: https://github.com/ashleve/lightning-hydra-template  
+The model and the predicted bvh files will be stored in folder:  
+./logs/gesture_generation/multiruns/yyyy-mm-day-hour-minute, respectively.
+
+
 ## BibTeX
 
 ```bibtex
@@ -43,11 +52,3 @@ The trained model and the predicted bvh files will be saved in folder:
   organization={Springer}
 }
 ```
-### train by multirun
-For example, we want to train the model by different parameters setting , we could execute the command below(you could list any parameters which are defined in *.yaml  and set them with any value you want):  
-`python train_gesture_generation.py --multirun model.train_net.diff_steps=100,500 datamodule.dropout=0,0.2,0.4,0.6`  
-reference: https://github.com/ashleve/lightning-hydra-template  
-The model and the predicted bvh files will be stored in folder:  
-./logs/gesture_generation/multiruns/yyyy-mm-day-hour-minute, respectively.
-
-
