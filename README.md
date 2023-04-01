@@ -30,6 +30,19 @@ hardware: Geforce RTX 3090
 `python train_gesture_generation.py`  
 The trained model and the predicted bvh files will be saved in folder:  
 ./logs/gesture_generation/runs/yyyy-mm-day-hour-minute
+
+## BibTeX
+
+```bibtex
+@inproceedings{zhang2023diffmotion,
+  title={DiffMotion: Speech-Driven Gesture Synthesis Using Denoising Diffusion Model},
+  author={Zhang, Fan and Ji, Naye and Gao, Fuxing and Li, Yongping},
+  booktitle={MultiMedia Modeling: 29th International Conference, MMM 2023, Bergen, Norway, January 9--12, 2023, Proceedings, Part I},
+  pages={231--242},
+  year={2023},
+  organization={Springer}
+}
+```
 ### train by multirun
 For example, we want to train the model by different parameters setting , we could execute the command below(you could list any parameters which are defined in *.yaml  and set them with any value you want):  
 `python train_gesture_generation.py --multirun model.train_net.diff_steps=100,500 datamodule.dropout=0,0.2,0.4,0.6`  
