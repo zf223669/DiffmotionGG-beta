@@ -19,7 +19,7 @@ hydra-optuna-sweeper==1.2.0
 pyrootutils~=1.0.4
 pre-commit      # hooks for applying linters on commit
 rich~=12.5.1
-pytest~=7.1.2
+pytest~=7.3.2
 sh~=1.14.2
 
 omegaconf~=2.2.2
